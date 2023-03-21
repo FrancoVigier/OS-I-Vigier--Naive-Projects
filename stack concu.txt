@@ -1,0 +1,80 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <pthread.h>
+#include <malloc.h>
+#include <assert.h>
+
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+typedef struct {
+    int * top;
+    int cantidad;
+} stack_c;
+
+stack_c crear_stack_c() {
+    int * i = malloc(1024 * sizeof(int));
+
+    return (stack_c) {
+        .top = i,
+        .cantidad = 0,
+    };
+}
+
+stack_c push_stack_c(stack_c stack, int algo) {
+    pthread_mutex_lock(&lock);
+
+    stack.cantidad += 1;
+    *(stack.top) = algo;
+    stack.top++;
+
+    pthread_mutex_unlock(&lock);
+
+    return stack;
+}
+
+int top_stack_c(stack_c stack) {
+    pthread_mutex_lock(&lock);
+    int r = *(stack.top - 1);
+    pthread_mutex_unlock(&lock);
+
+    return r;
+}
+
+stack_c pop_stack_c(stack_c stack) {
+    pthread_mutex_lock(&lock);
+    stack.cantidad--;
+    stack.top--;
+    pthread_mutex_unlock(&lock);
+
+    return stack;
+}
+
+bool vacio_stack_c(stack_c stack) {
+    pthread_mutex_lock(&lock);
+    bool r = stack.cantidad == 0;
+    pthread_mutex_unlock(&lock);
+
+    return r;
+}
+
+int main() {
+    stack_c s = crear_stack_c();
+    s = push_stack_c(s, 1);
+    s = push_stack_c(s, 2);
+    s = push_stack_c(s, 3);
+    s = push_stack_c(s, 4);
+    s = push_stack_c(s, 5);
+    assert(5 == top_stack_c(s));
+    assert(5 == top_stack_c(s));
+    s = pop_stack_c(s);
+    assert(4 == top_stack_c(s));
+    s = pop_stack_c(s);
+    assert(3 == top_stack_c(s));
+    s = pop_stack_c(s);
+    assert(2 == top_stack_c(s));
+    s = pop_stack_c(s);
+    assert(1 == top_stack_c(s));
+    s = pop_stack_c(s);
+    assert(vacio_stack_c(s));
+    return 0;
+}
